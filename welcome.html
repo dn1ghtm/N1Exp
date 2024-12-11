@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>N1GHTLY Browser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0a0b0f;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .search-wrapper {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-container {
+            flex: 1;
+            display: flex;
+            background: #1a1c26;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .search-container:focus-within {
+            box-shadow: 0 0 0 2px rgba(140, 158, 255, 0.3);
+        }
+
+        .search-box {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 15px;
+            background: transparent;
+            border: none;
+            color: #fff;
+            width: 100%;
+        }
+
+        .search-box:focus {
+            outline: none;
+        }
+
+        .search-box::placeholder {
+            color: #6c7693;
+        }
+
+        .search-btn {
+            padding: 0 16px;
+            background: transparent;
+            border: none;
+            color: #8087a2;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-btn:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            padding: 10px 20px;
+            background: #1a1c26;
+            border: none;
+            border-radius: 6px;
+            color: #8087a2;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .action-btn:hover {
+            background: #22242f;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-wrapper">
+        <div class="search-container">
+            <input type="text" 
+                   class="search-box" 
+                   placeholder="Search with Google..." 
+                   id="search-input"
+                   autocomplete="off">
+            <button class="search-btn" onclick="search()">🔍</button>
+        </div>
+    </div>
+
+    <div class="quick-actions">
+        <button class="action-btn" onclick="newTab()">New Tab</button>
+        <button class="action-btn" onclick="toggleBookmarks()">Bookmarks</button>
+        <button class="action-btn" onclick="toggleHistory()">History</button>
+    </div>
+
+    <script>
+        const searchInput = document.getElementById('search-input');
+        
+        // Focus search box on load
+        searchInput.focus();
+
+        // Handle Enter key in search box
+        searchInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                search();
+            }
+        });
+
+        function search() {
+            const query = searchInput.value.trim();
+            if (!query) return;
+
+            // Create Google search URL
+            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+            
+            // Send to main process
+            window.electron.ipcRenderer.send('load-url', searchUrl);
+        }
+
+        function newTab() {
+            window.electron.ipcRenderer.send('new-tab');
+        }
+
+        function toggleBookmarks() {
+            window.electron.ipcRenderer.send('toggle-bookmarks');
+        }
+
+        function toggleHistory() {
+            window.electron.ipcRenderer.send('toggle-history');
+        }
+    </script>
+</body>
+</html> 

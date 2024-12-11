@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>N1Exp - History</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1c26;
+            color: #fff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #252839;
+        }
+        .brand {
+            font-weight: bold;
+            font-size: 18px;
+            letter-spacing: 1px;
+            color: #8087a2;
+        }
+        .brand span {
+            color: #fff;
+        }
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #252839;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .history-item:hover {
+            background: #252839;
+        }
+        .title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .url {
+            color: #8087a2;
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+        .time {
+            color: #6c7693;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="brand">N1<span>Exp</span> History</div>
+    </div>
+    <div id="history-list"></div>
+
+    <script>
+        async function loadHistory() {
+            const history = await window.electron.ipcRenderer.invoke('get-history');
+            const historyList = document.getElementById('history-list');
+            
+            historyList.innerHTML = history.map(item => `
+                <div class="history-item" onclick="loadUrl('${item.url}')">
+                    <div class="title">${item.title || item.url}</div>
+                    <div class="url">${item.url}</div>
+                    <div class="time">${new Date(item.timestamp).toLocaleString()}</div>
+                </div>
+            `).join('');
+        }
+
+        async function loadUrl(url) {
+            try {
+                const result = await window.electron.ipcRenderer.invoke('load-url', url);
+                if (!result.success) {
+                    console.error('Failed to load URL:', result.error);
+                }
+            } catch (error) {
+                console.error('Error loading URL:', error);
+            }
+        }
+
+        // Load history when page opens
+        loadHistory();
+    </script>
+</body>
+</html> 

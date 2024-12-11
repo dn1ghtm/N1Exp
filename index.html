@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>N1Exp Browser</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #controls {
+            padding: 10px;
+            background: #1a1c26;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            border-bottom: 1px solid #252839;
+        }
+        .url-container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            background: #252839;
+            border-radius: 6px;
+            padding-right: 5px;
+            transition: all 0.2s;
+        }
+        .url-container:focus-within {
+            background: #2f334d;
+            box-shadow: 0 0 0 2px rgba(140, 158, 255, 0.3);
+        }
+        #urlbar {
+            flex-grow: 1;
+            padding: 8px 12px;
+            border: none;
+            outline: none;
+            font-size: 14px;
+            background: transparent;
+            color: #fff;
+        }
+        button {
+            padding: 8px 15px;
+            background: #252839;
+            border: none;
+            border-radius: 6px;
+            color: #8087a2;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        button:hover {
+            background: #2f334d;
+            color: #fff;
+        }
+        #browser-view {
+            width: 100vw;
+            height: calc(100vh - 56px);
+            border: none;
+        }
+        .brand {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #8087a2;
+            font-weight: bold;
+            padding: 0 15px;
+            font-size: 16px;
+            letter-spacing: 1px;
+        }
+        .brand span {
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <div class="brand">N1<span>Exp</span></div>
+        <button onclick="goBack()" title="Go Back">←</button>
+        <button onclick="goForward()" title="Go Forward">→</button>
+        <button onclick="refresh()" title="Refresh">🔄</button>
+        <button onclick="goHome()" title="Home">🏠</button>
+        <div class="url-container">
+            <input type="text" id="urlbar" placeholder="Search with Google or enter URL...">
+        </div>
+        <button onclick="toggleHistory()" title="History">📋</button>
+        <button onclick="toggleBookmarks()" title="Bookmarks">⭐</button>
+    </div>
+    <webview id="browser-view" src="https://www.google.com" webpreferences="contextIsolation=false"></webview>
+
+    <script>
+        const webview = document.getElementById('browser-view');
+        const urlbar = document.getElementById('urlbar');
+
+        webview.addEventListener('did-start-loading', () => {
+            // Add loading indicator if needed
+        });
+
+        webview.addEventListener('did-stop-loading', () => {
+            urlbar.value = webview.getURL();
+            // Add to history
+            if (!webview.getURL().includes('google.com')) {
+                window.electron.ipcRenderer.send('add-to-history', {
+                    url: webview.getURL(),
+                    title: webview.getTitle()
+                });
+            }
+        });
+
+        // Listen for URL loading messages from main process
+        window.electron.ipcRenderer.on('load-url-in-webview', (url) => {
+            if (webview && url) {
+                webview.loadURL(url);
+            }
+        });
+
+        function loadURL() {
+            let url = urlbar.value.trim();
+            if (url === '') {
+                goHome();
+                return;
+            }
+
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = `https://www.google.com/search?q=${encodeURIComponent(url)}`;
+            }
+            webview.loadURL(url);
+        }
+
+        function goBack() {
+            if (webview.canGoBack()) {
+                webview.goBack();
+            }
+        }
+
+        function goForward() {
+            if (webview.canGoForward()) {
+                webview.goForward();
+            }
+        }
+
+        function refresh() {
+            webview.reload();
+        }
+
+        function goHome() {
+            webview.loadURL('https://www.google.com');
+            urlbar.value = '';
+        }
+
+        function toggleHistory() {
+            window.electron.ipcRenderer.send('toggle-history');
+        }
+
+        function toggleBookmarks() {
+            window.electron.ipcRenderer.send('toggle-bookmarks');
+        }
+
+        // Handle URL bar
+        urlbar.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                loadURL();
+            }
+        });
+    </script>
+</body>
+</html> 

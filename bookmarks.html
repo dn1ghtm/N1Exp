@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>N1Exp - Bookmarks</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1c26;
+            color: #fff;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #252839;
+        }
+        .brand {
+            font-weight: bold;
+            font-size: 18px;
+            letter-spacing: 1px;
+            color: #8087a2;
+        }
+        .brand span {
+            color: #fff;
+        }
+        .bookmark-item {
+            padding: 10px;
+            border-bottom: 1px solid #252839;
+            transition: all 0.2s;
+        }
+        .bookmark-item:hover {
+            background: #252839;
+        }
+        .title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .url {
+            color: #8087a2;
+            font-size: 0.9em;
+            word-break: break-all;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        button {
+            padding: 5px 10px;
+            background: #252839;
+            border: none;
+            border-radius: 4px;
+            color: #8087a2;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+        }
+        button:hover {
+            background: #2f334d;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="brand">N1<span>Exp</span> Bookmarks</div>
+    </div>
+    <div id="bookmarks-list"></div>
+
+    <script>
+        async function loadBookmarks() {
+            const bookmarks = await window.electron.ipcRenderer.invoke('get-bookmarks');
+            const bookmarksList = document.getElementById('bookmarks-list');
+            
+            bookmarksList.innerHTML = bookmarks.map(item => `
+                <div class="bookmark-item">
+                    <div class="title">${item.title || item.url}</div>
+                    <div class="url">${item.url}</div>
+                    <div class="actions">
+                        <button onclick="loadUrl('${item.url}')">Visit</button>
+                        <button onclick="removeBookmark(${item.id})">Remove</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadUrl(url) {
+            try {
+                const result = await window.electron.ipcRenderer.invoke('load-url', url);
+                if (!result.success) {
+                    console.error('Failed to load URL:', result.error);
+                }
+            } catch (error) {
+                console.error('Error loading URL:', error);
+            }
+        }
+
+        async function removeBookmark(id) {
+            await window.electron.ipcRenderer.invoke('remove-bookmark', id);
+            loadBookmarks();
+        }
+
+        // Load bookmarks when page opens
+        loadBookmarks();
+    </script>
+</body>
+</html> 
