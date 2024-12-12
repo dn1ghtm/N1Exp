@@ -42,7 +42,6 @@
             align-items: center;
             background: var(--bg-secondary);
             border-radius: 6px;
-            padding-right: 5px;
             transition: all 0.2s;
         }
         .url-container:focus-within {
@@ -60,6 +59,21 @@
         }
         #urlbar::placeholder {
             color: var(--text-secondary);
+        }
+        #addBookmark {
+            padding: 8px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #addBookmark:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
         }
         button {
             padding: 8px 15px;
@@ -104,6 +118,7 @@
         <button onclick="goHome()" title="Home">🏠</button>
         <div class="url-container">
             <input type="text" id="urlbar" placeholder="Search with Google or enter URL...">
+            <button id="addBookmark" title="Add to bookmarks" onclick="addCurrentToBookmarks()">⭐</button>
         </div>
         <button onclick="toggleHistory()" title="History">📋</button>
         <button onclick="toggleBookmarks()" title="Bookmarks">⭐</button>
@@ -202,6 +217,46 @@
 
         function openSettings() {
             window.electron.ipcRenderer.send('open-settings');
+        }
+
+        async function addCurrentToBookmarks() {
+            console.log('Bookmark button clicked');
+            const url = webview.getURL();
+            const title = webview.getTitle();
+            
+            console.log('Current URL:', url);
+            console.log('Current Title:', title);
+            
+            if (url && title && !url.includes('google.com')) {
+                // Check if URL is already bookmarked
+                const existingBookmarks = await window.electron.ipcRenderer.invoke('get-bookmarks');
+                const isAlreadyBookmarked = existingBookmarks.some(b => b.url === url);
+                
+                if (isAlreadyBookmarked) {
+                    console.log('URL already bookmarked');
+                    return;
+                }
+                
+                const button = document.getElementById('addBookmark');
+                
+                // Add to bookmarks
+                await window.electron.ipcRenderer.invoke('add-bookmark', {
+                    url: url,
+                    title: title
+                });
+                
+                // Visual feedback
+                button.textContent = '★';
+                button.style.color = '#4CAF50';
+                
+                // Reset after a moment
+                setTimeout(() => {
+                    button.textContent = '⭐';
+                    button.style.color = 'var(--text-secondary)';
+                }, 1000);
+            } else {
+                console.log('URL or title missing, or is Google');
+            }
         }
 
         // Handle URL bar
