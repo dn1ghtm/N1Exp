@@ -1,15 +1,80 @@
-const { app, BrowserWindow, ipcMain, autoUpdater } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
+const config = require('./config');
+const { checkForUpdates } = require('./config.js');
 
-// Store history and bookmarks in user's app data
+// Check if we're in development mode
+const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+
+// Configure auto updater
+if (!isDev) {
+    autoUpdater.setFeedURL({
+        provider: 'github',
+        owner: 'dn1ghtm',
+        repo: 'n1exp'
+    });
+
+    // Update event handlers
+    autoUpdater.on('checking-for-update', () => {
+        sendUpdateStatus({ state: 'checking' });
+    });
+
+    autoUpdater.on('update-available', (info) => {
+        sendUpdateStatus({ 
+            state: 'available',
+            version: info.version
+        });
+    });
+
+    autoUpdater.on('update-not-available', (info) => {
+        sendUpdateStatus({ 
+            state: 'not-available',
+            version: info.version
+        });
+    });
+
+    autoUpdater.on('error', (err) => {
+        sendUpdateStatus({ 
+            state: 'error',
+            error: err.message
+        });
+    });
+
+    autoUpdater.on('download-progress', (progressObj) => {
+        sendUpdateStatus({
+            state: 'downloading',
+            progress: Math.round(progressObj.percent)
+        });
+    });
+
+    autoUpdater.on('update-downloaded', () => {
+        sendUpdateStatus({ state: 'downloaded' });
+    });
+}
+
+function sendUpdateStatus(status) {
+    BrowserWindow.getAllWindows().forEach(window => {
+        window.webContents.send('update-status', status);
+    });
+}
+
+// Store paths
 const historyPath = path.join(app.getPath('userData'), 'history.json');
 const bookmarksPath = path.join(app.getPath('userData'), 'bookmarks.json');
+const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+const cachePath = path.join(app.getPath('userData'), 'Cache');
 
-// Initialize history and bookmarks
+// Initialize data stores
 let browserHistory = [];
 let bookmarks = [];
+let settings = {
+    doNotTrack: false,
+    theme: 'dark'
+};
 
+// Load data from files
 try {
     browserHistory = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
 } catch (error) {
@@ -22,12 +87,23 @@ try {
     bookmarks = [];
 }
 
+try {
+    settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
+} catch (error) {
+    // Use default settings if file doesn't exist
+}
+
+// Save functions
 function saveHistory() {
     fs.writeFileSync(historyPath, JSON.stringify(browserHistory));
 }
 
 function saveBookmarks() {
     fs.writeFileSync(bookmarksPath, JSON.stringify(bookmarks));
+}
+
+function saveSettings() {
+    fs.writeFileSync(settingsPath, JSON.stringify(settings));
 }
 
 function createWindow() {
@@ -46,6 +122,22 @@ function createWindow() {
     mainWindow.loadFile('index.html');
 }
 
+// Create settings window
+function createSettingsWindow() {
+    const settingsWindow = new BrowserWindow({
+        width: 600,
+        height: 700,
+        autoHideMenuBar: true,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: true,
+            preload: path.join(__dirname, 'preload.js')
+        }
+    });
+
+    settingsWindow.loadFile('settings.html');
+}
+
 app.whenReady().then(() => {
     createWindow();
 
@@ -58,13 +150,90 @@ app.on('window-all-closed', function () {
     if (process.platform !== 'darwin') app.quit();
 });
 
+// Handle version and update-related IPC events
+ipcMain.handle('get-version', () => {
+    return app.getVersion();
+});
+
+ipcMain.handle('check-for-updates', async () => {
+    try {
+        const updateResult = await checkForUpdates();
+        return updateResult;
+    } catch (error) {
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+});
+
+ipcMain.handle('start-update', () => {
+    if (!isDev) {
+        return autoUpdater.downloadUpdate();
+    }
+});
+
+ipcMain.handle('install-update', () => {
+    if (!isDev) {
+        return autoUpdater.quitAndInstall();
+    }
+});
+
+// Handle settings-related IPC events
+ipcMain.handle('get-settings', () => {
+    return settings;
+});
+
+ipcMain.handle('save-settings', (event, newSettings) => {
+    settings = { ...settings, ...newSettings };
+    saveSettings();
+    
+    // Notify all windows about settings change
+    BrowserWindow.getAllWindows().forEach(window => {
+        window.webContents.send('settings-updated', settings);
+    });
+    
+    return settings;
+});
+
+ipcMain.handle('clear-data', async () => {
+    try {
+        // Clear history
+        browserHistory = [];
+        saveHistory();
+
+        // Clear cache
+        if (fs.existsSync(cachePath)) {
+            fs.rmSync(cachePath, { recursive: true, force: true });
+        }
+
+        // Clear cookies
+        const session = BrowserWindow.getAllWindows()[0]?.webContents.session;
+        if (session) {
+            await session.clearCache();
+            await session.clearStorageData({
+                storages: ['cookies', 'localstorage', 'websql', 'indexdb', 'shadercache', 'serviceworkers']
+            });
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error clearing data:', error);
+        return false;
+    }
+});
+
+// Handle settings window
+ipcMain.on('open-settings', () => {
+    createSettingsWindow();
+});
+
 // Handle history-related IPC events
 ipcMain.on('add-to-history', (event, historyItem) => {
     browserHistory.unshift({
         ...historyItem,
         timestamp: new Date().toISOString()
     });
-    // Keep only last 1000 entries
     if (browserHistory.length > 1000) {
         browserHistory = browserHistory.slice(0, 1000);
     }
@@ -155,21 +324,4 @@ ipcMain.on('toggle-bookmarks', (event) => {
         createPanelWindow('bookmarks', win);
     }
 });
-
-// Configure auto updater
-function setupAutoUpdater() {
-  // URL format: https://github.com/owner/repo/releases/latest
-  const server = updateServerUrl;
-  const url = `${server}/update/${process.platform}/${app.getVersion()}`;
   
-  autoUpdater.setFeedURL({ url });
-
-  // Check for updates every hour
-  setInterval(() => {
-    autoUpdater.checkForUpdates();
-  }, 60 * 60 * 1000);
-
-  autoUpdater.on('update-downloaded', () => {
-    autoUpdater.quitAndInstall();
-  });
-} 

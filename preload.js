@@ -5,7 +5,8 @@ const validSendChannels = [
     'add-to-history', 
     'toggle-bookmarks', 
     'toggle-history',
-    'new-tab'
+    'new-tab',
+    'open-settings'
 ];
 
 const validInvokeChannels = [
@@ -13,11 +14,20 @@ const validInvokeChannels = [
     'get-bookmarks', 
     'add-bookmark', 
     'remove-bookmark',
-    'load-url'
+    'load-url',
+    'get-settings',
+    'save-settings',
+    'clear-data',
+    'get-version',
+    'check-for-updates',
+    'start-update',
+    'install-update'
 ];
 
 const validReceiveChannels = [
-    'load-url-in-webview'
+    'load-url-in-webview',
+    'settings-updated',
+    'update-status'
 ];
 
 console.log('Setting up IPC channels');
