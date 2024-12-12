@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
+const { config } = require('./config');
 
 // Log available channels
 const validSendChannels = [
@@ -57,5 +58,8 @@ contextBridge.exposeInMainWorld('electron', {
                 ipcRenderer.on(channel, (event, ...args) => func(...args));
             }
         }
+    },
+    config: {
+        version: config.version
     }
 }); 

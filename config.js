@@ -1,6 +1,6 @@
 const config = {
     version: '1.0.0', // Current version of the application
-    githubConfigUrl: 'https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/config.js',
+    githubConfigUrl: 'https://github.com/dn1ghtm/N1Exp/blob/live/config.js',
 };
 
 async function checkForUpdates() {
