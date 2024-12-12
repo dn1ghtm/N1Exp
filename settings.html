@@ -192,12 +192,11 @@
         // Load settings and version info when page opens
         window.addEventListener('DOMContentLoaded', async () => {
             const settings = await window.electron.ipcRenderer.invoke('get-settings');
-            const version = await window.electron.ipcRenderer.invoke('get-version');
             
             // Apply settings to form
             document.getElementById('doNotTrack').checked = settings.doNotTrack || false;
             document.getElementById('theme').value = settings.theme || 'dark';
-            document.getElementById('versionInfo').textContent = `Current version: ${version}`;
+            document.getElementById('versionInfo').textContent = `Current version: ${window.electron.config.version}`;
         });
 
         // Save settings when changed
@@ -238,7 +237,7 @@
                         versionInfo.textContent = `Update available: ${result.remoteVersion} (Current: ${result.currentVersion})`;
                         updateButton.textContent = 'Download Latest Version';
                         updateButton.onclick = () => {
-                            window.open('https://github.com/YOUR_USERNAME/YOUR_REPO/releases/latest', '_blank');
+                            window.open('https://github.com/dn1ghtm/N1Exp/releases', '_blank');
                         };
                     } else {
                         versionInfo.textContent = `Current version: ${result.currentVersion} (Latest)`;

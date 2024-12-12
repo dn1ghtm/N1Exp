@@ -106,11 +106,23 @@ function saveSettings() {
     fs.writeFileSync(settingsPath, JSON.stringify(settings));
 }
 
+function getIconPath() {
+    switch (process.platform) {
+        case 'win32':
+            return path.join(__dirname, 'imgs/ico/sigmalogo.ico');
+        case 'darwin':
+            return path.join(__dirname, 'imgs/ico/sigmalogo.icns');
+        default:
+            return path.join(__dirname, 'imgs/ico/sigmalogo.png');
+    }
+}
+
 function createWindow() {
     const mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
         autoHideMenuBar: true,
+        icon: getIconPath(),
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: true,
@@ -128,6 +140,7 @@ function createSettingsWindow() {
         width: 600,
         height: 700,
         autoHideMenuBar: true,
+        icon: getIconPath(),
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: true,
@@ -300,6 +313,7 @@ function createPanelWindow(type, parentWindow) {
         height: 600,
         parent: parentWindow,
         autoHideMenuBar: true,
+        icon: getIconPath(),
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: true,
