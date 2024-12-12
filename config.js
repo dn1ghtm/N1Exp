@@ -1,5 +1,5 @@
 const config = {
-    version: '1.0.2', // Current version of the application
+    version: '1.0.1', // Current version of the application
     githubConfigUrl: 'https://github.com/dn1ghtm/N1Exp/blob/live/config.js',
 };
 
