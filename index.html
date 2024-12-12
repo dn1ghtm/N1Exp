@@ -1,33 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="dark">
 <head>
     <title>N1Exp Browser</title>
     <style>
+        :root[data-theme="dark"] {
+            --bg-primary: #1a1c26;
+            --bg-secondary: #252839;
+            --bg-hover: #2f334d;
+            --text-primary: #fff;
+            --text-secondary: #8087a2;
+            --accent: #3d4674;
+        }
+
+        :root[data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f0f0f0;
+            --bg-hover: #e5e5e5;
+            --text-primary: #000000;
+            --text-secondary: #666666;
+            --accent: #4a5481;
+        }
+
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
+            background: var(--bg-primary);
+            color: var(--text-primary);
         }
         #controls {
             padding: 10px;
-            background: #1a1c26;
+            background: var(--bg-primary);
             display: flex;
             gap: 10px;
             align-items: center;
-            border-bottom: 1px solid #252839;
+            border-bottom: 1px solid var(--bg-secondary);
         }
         .url-container {
             flex-grow: 1;
             display: flex;
             align-items: center;
-            background: #252839;
+            background: var(--bg-secondary);
             border-radius: 6px;
             padding-right: 5px;
             transition: all 0.2s;
         }
         .url-container:focus-within {
-            background: #2f334d;
-            box-shadow: 0 0 0 2px rgba(140, 158, 255, 0.3);
+            background: var(--bg-hover);
+            box-shadow: 0 0 0 2px var(--accent);
         }
         #urlbar {
             flex-grow: 1;
@@ -36,14 +56,17 @@
             outline: none;
             font-size: 14px;
             background: transparent;
-            color: #fff;
+            color: var(--text-primary);
+        }
+        #urlbar::placeholder {
+            color: var(--text-secondary);
         }
         button {
             padding: 8px 15px;
-            background: #252839;
+            background: var(--bg-secondary);
             border: none;
             border-radius: 6px;
-            color: #8087a2;
+            color: var(--text-secondary);
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
@@ -51,8 +74,8 @@
             justify-content: center;
         }
         button:hover {
-            background: #2f334d;
-            color: #fff;
+            background: var(--bg-hover);
+            color: var(--text-primary);
         }
         #browser-view {
             width: 100vw;
@@ -61,14 +84,14 @@
         }
         .brand {
             font-family: 'Segoe UI', Arial, sans-serif;
-            color: #8087a2;
+            color: var(--text-secondary);
             font-weight: bold;
             padding: 0 15px;
             font-size: 16px;
             letter-spacing: 1px;
         }
         .brand span {
-            color: #fff;
+            color: var(--text-primary);
         }
     </style>
 </head>
@@ -84,12 +107,41 @@
         </div>
         <button onclick="toggleHistory()" title="History">📋</button>
         <button onclick="toggleBookmarks()" title="Bookmarks">⭐</button>
+        <button onclick="openSettings()" title="Settings">⚙️</button>
     </div>
     <webview id="browser-view" src="https://www.google.com" webpreferences="contextIsolation=false"></webview>
 
     <script>
         const webview = document.getElementById('browser-view');
         const urlbar = document.getElementById('urlbar');
+
+        // Load settings
+        let browserSettings = {
+            doNotTrack: false,
+            theme: 'dark'
+        };
+
+        async function loadSettings() {
+            browserSettings = await window.electron.ipcRenderer.invoke('get-settings');
+            applySettings();
+        }
+
+        function applySettings() {
+            // Apply theme
+            document.documentElement.setAttribute('data-theme', browserSettings.theme);
+            
+            // Apply Do Not Track
+            webview.setWebRTCIPHandlingPolicy(browserSettings.doNotTrack ? 'disable_non_proxied_udp' : 'default');
+        }
+
+        // Load settings when page opens
+        loadSettings();
+
+        // Listen for settings updates
+        window.electron.ipcRenderer.on('settings-updated', (newSettings) => {
+            browserSettings = newSettings;
+            applySettings();
+        });
 
         webview.addEventListener('did-start-loading', () => {
             // Add loading indicator if needed
@@ -103,13 +155,6 @@
                     url: webview.getURL(),
                     title: webview.getTitle()
                 });
-            }
-        });
-
-        // Listen for URL loading messages from main process
-        window.electron.ipcRenderer.on('load-url-in-webview', (url) => {
-            if (webview && url) {
-                webview.loadURL(url);
             }
         });
 
@@ -155,10 +200,21 @@
             window.electron.ipcRenderer.send('toggle-bookmarks');
         }
 
+        function openSettings() {
+            window.electron.ipcRenderer.send('open-settings');
+        }
+
         // Handle URL bar
         urlbar.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 loadURL();
+            }
+        });
+
+        // Listen for URL loading messages from main process
+        window.electron.ipcRenderer.on('load-url-in-webview', (url) => {
+            if (webview && url) {
+                webview.loadURL(url);
             }
         });
     </script>
