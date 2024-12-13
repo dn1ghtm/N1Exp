@@ -158,7 +158,6 @@ Version format: x.y.z (semantic versioning)
 
 ## Future Improvements
 
-- Tab management system
 - Advanced bookmark organization
 - Extension support
 - Custom themes
