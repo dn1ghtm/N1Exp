@@ -62,4 +62,12 @@ contextBridge.exposeInMainWorld('electron', {
     config: {
         version: config.version
     }
+});
+
+contextBridge.exposeInMainWorld('tabs', {
+    create: () => ipcRenderer.invoke('tab-create'),
+    close: (tabId) => ipcRenderer.invoke('tab-close', tabId),
+    switch: (tabId) => ipcRenderer.invoke('tab-switch', tabId),
+    update: (tabId, data) => ipcRenderer.invoke('tab-update', tabId, data),
+    getTabs: () => ipcRenderer.invoke('get-tabs')
 }); 
