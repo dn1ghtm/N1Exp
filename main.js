@@ -117,6 +117,66 @@ function getIconPath() {
     }
 }
 
+// Tab management
+let tabs = new Map();
+let activeTabId = null;
+let tabCounter = 0;
+
+function createTab(win) {
+    const tabId = `tab-${tabCounter++}`;
+    tabs.set(tabId, {
+        id: tabId,
+        title: 'New Tab',
+        url: 'about:blank',
+        webview: null
+    });
+    return tabId;
+}
+
+// IPC handlers for tabs
+ipcMain.handle('tab-create', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const tabId = createTab(win);
+    activeTabId = tabId;
+    return { tabId, tabs: Array.from(tabs.values()) };
+});
+
+ipcMain.handle('tab-close', async (event, tabId) => {
+    const tab = tabs.get(tabId);
+    if (tab) {
+        tabs.delete(tabId);
+        if (activeTabId === tabId) {
+            activeTabId = tabs.size > 0 ? Array.from(tabs.keys())[0] : null;
+        }
+    }
+    return { tabs: Array.from(tabs.values()), activeTabId };
+});
+
+ipcMain.handle('tab-switch', async (event, tabId) => {
+    if (tabs.has(tabId)) {
+        activeTabId = tabId;
+        return { activeTabId, tab: tabs.get(tabId) };
+    }
+    return null;
+});
+
+ipcMain.handle('tab-update', async (event, tabId, data) => {
+    const tab = tabs.get(tabId);
+    if (tab) {
+        Object.assign(tab, data);
+        return tab;
+    }
+    return null;
+});
+
+ipcMain.handle('get-tabs', async () => {
+    return {
+        tabs: Array.from(tabs.values()),
+        activeTabId
+    };
+});
+
+// Modify the createWindow function to create an initial tab
 function createWindow() {
     const mainWindow = new BrowserWindow({
         width: 1200,
@@ -132,6 +192,10 @@ function createWindow() {
     });
 
     mainWindow.loadFile('index.html');
+
+    // Create initial tab
+    const initialTabId = createTab(mainWindow);
+    activeTabId = initialTabId;
 }
 
 // Create settings window
